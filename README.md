@@ -2,7 +2,9 @@
 
 > 深度学习中的高效计算方法
 
-Personal course-material archive for the **Efficient Computing of Deep Neural Networks** summer course.
+This repository contains a **course-material index** for the **Efficient Computing of Deep Neural Networks** summer course. 
+
+**Note:** The actual slide PDFs and legacy assignment/lab files are **not hosted here** out of respect for copyright. See [How to Obtain the Materials](#how-to-obtain-the-materials) below.
 
 ## Course Information
 
@@ -20,7 +22,7 @@ Personal course-material archive for the **Efficient Computing of Deep Neural Ne
 
 ```
 ECDNN/
-├── 2026-slides/          # Lecture slides for the current session
+├── 2026-slides/          # Lecture slide index (PDFs not included)
 │   ├── Lec1-intro.pdf
 │   ├── Im1-GEMM.pdf
 │   ├── Im2-Direct-Conv.pdf
@@ -34,7 +36,7 @@ ECDNN/
 │   ├── Mo4-BNN.pdf
 │   ├── Mo5-KD.pdf
 │   └── Mo6-NAS.pdf
-└── legacy/               # Materials from previous ECDNN offerings
+└── legacy/               # Index of prior-session materials (files not included)
     ├── ECDNN_Assignment1.pdf
     ├── ECDNN_Assignment2.pdf
     ├── Answer_Assignment1.pdf
@@ -47,9 +49,14 @@ ECDNN/
     └── answer_lab2.zip
 ```
 
-## Legacy Materials — Attribution & Usage
+## How to Obtain the Materials
 
-The files under `legacy/` are retained from the **ECDNN 2025 Summer** session. They are included here for reference and self-study only:
+- **Current 2026 slides**: Please contact the course instructor, **Bei Yu** (`byu@cse.cuhk.edu.hk`), CSE Department, CUHK, or refer to the official course distribution channel.
+- **Legacy 2025 materials**: Available via [PKU Hub — plib course material #937](https://pkuhub.cn/material/937).
+
+## Legacy Materials — Attribution
+
+The `legacy/` entries refer to materials from the **ECDNN 2025 Summer** session:
 
 - **Source / Origin:** [PKU Hub — plib course material #937](https://pkuhub.cn/material/937)
 - **Contents:** Assignments, reference answers, lab slides and reports from the 2025 summer offering.
@@ -68,4 +75,4 @@ The files under `legacy/` are retained from the **ECDNN 2025 Summer** session. T
 
 ## Disclaimer
 
-Slide content is from the course instructor; legacy materials are sourced from [PKU Hub — plib course material #937](https://pkuhub.cn/material/937). All rights belong to their respective authors. This repository is shared for educational reference only.
+Slide content is from the course instructor (Bei Yu, CUHK); legacy materials are sourced from [PKU Hub — plib course material #937](https://pkuhub.cn/material/937). All rights belong to their respective authors. This repository is an educational index only and does not redistribute the original copyrighted files.
