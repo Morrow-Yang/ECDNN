@@ -27,6 +27,7 @@
     body {
       margin: 0;
       min-height: 100vh;
+      padding-bottom: 142px;
       background: var(--page);
       color: var(--ink);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -114,6 +115,44 @@
     input[type="range"] {
       width: 100%;
       accent-color: #1f2937;
+    }
+
+    .learnBar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 0.75fr);
+      gap: 12px;
+      margin: 12px 0 14px;
+    }
+
+    .explainBox,
+    .termBox {
+      padding: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 1px 0 rgba(26, 36, 51, 0.04);
+    }
+
+    .explainBox b,
+    .termBox b {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .explainBox p,
+    .termBox p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .termControls {
+      display: grid;
+      grid-template-columns: auto minmax(130px, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
     }
 
     .modeTabs {
@@ -279,6 +318,17 @@
       outline-offset: -3px;
     }
 
+    .cell.built {
+      box-shadow: inset 0 0 0 2px rgba(28, 36, 48, 0.12);
+    }
+
+    .cell.termHot {
+      background: #202938;
+      border-color: #202938;
+      color: #fff;
+      transform: scale(1.05);
+    }
+
     .calc {
       margin-top: 14px;
       padding: 12px;
@@ -299,6 +349,17 @@
       font-size: 13px;
       line-height: 1.45;
       overflow-wrap: anywhere;
+    }
+
+    .formula span {
+      display: inline-block;
+      padding: 1px 3px;
+      border-radius: 4px;
+    }
+
+    .formula .activeTerm {
+      background: #202938;
+      color: #fff;
     }
 
     .comparison {
@@ -369,11 +430,48 @@
       line-height: 1.4;
     }
 
+    .dock {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      z-index: 20;
+      width: min(980px, calc(100vw - 24px));
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: auto minmax(220px, 1fr) minmax(220px, 1fr);
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 45px rgba(26, 36, 51, 0.18);
+      backdrop-filter: blur(12px);
+    }
+
+    .dockGroup {
+      display: grid;
+      grid-template-columns: auto auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dockSlider {
+      display: grid;
+      grid-template-columns: auto minmax(120px, 1fr);
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     @media (max-width: 980px) {
       header,
       .dashboard,
       .flow,
-      .comparison {
+      .comparison,
+      .learnBar,
+      .dock {
         grid-template-columns: 1fr;
       }
 
@@ -401,6 +499,10 @@
         width: 30px;
         height: 30px;
       }
+
+      .dockGroup {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
   </style>
 </head>
@@ -422,6 +524,22 @@
       <span class="stepText" id="stepLabel">step</span>
       <input id="stepRange" type="range" min="0" max="8" value="0">
       <span class="stepText" id="coordLabel">output</span>
+    </section>
+
+    <section class="learnBar">
+      <div class="explainBox">
+        <b id="stageTitle">What is happening?</b>
+        <p id="stageText"></p>
+      </div>
+      <div class="termBox">
+        <b id="termTitle">Multiplication term</b>
+        <p id="termText"></p>
+        <div class="termControls">
+          <button id="termPrevBtn" type="button" title="Previous multiplication term">-</button>
+          <input id="termRange" type="range" min="0" max="8" value="0">
+          <button id="termNextBtn" type="button" title="Next multiplication term">+</button>
+        </div>
+      </div>
     </section>
 
     <nav class="modeTabs" aria-label="Focus mode">
@@ -540,6 +658,22 @@
         </section>
       </div>
     </section>
+
+    <section class="dock" aria-label="Sticky playback controls">
+      <div class="dockGroup">
+        <button id="dockPrevBtn" type="button" title="Previous output cell">-</button>
+        <button id="dockPlayBtn" type="button" title="Play or pause">Play</button>
+        <button id="dockNextBtn" type="button" title="Next output cell">+</button>
+      </div>
+      <label class="dockSlider">
+        <span id="dockStepLabel">Output</span>
+        <input id="dockStepRange" type="range" min="0" max="8" value="0">
+      </label>
+      <label class="dockSlider">
+        <span id="dockTermLabel">Term</span>
+        <input id="dockTermRange" type="range" min="0" max="8" value="0">
+      </label>
+    </section>
   </main>
 
   <script>
@@ -565,6 +699,7 @@
     const outW = inW - kW + 1;
 
     let step = 0;
+    let term = 0;
     let timer = null;
     let mode = "all";
 
@@ -643,6 +778,7 @@
     function clearHighlights() {
       document.querySelectorAll(".cell").forEach((cell) => {
         cell.classList.remove("inputHot", "kernelHot", "outputHot", "rowHot", "mecHot", "segmentHot");
+        cell.classList.remove("built", "termHot");
       });
     }
 
@@ -670,6 +806,11 @@
       renderStep();
     }
 
+    function setTerm(newTerm) {
+      term = (newTerm + kH * kW) % (kH * kW);
+      renderStep();
+    }
+
     function renderStep() {
       clearHighlights();
       const orow = Math.floor(step / outW);
@@ -677,10 +818,20 @@
       const patch = patchAt(orow, ocol);
       const kflat = flattenKernel();
       const result = dot(patch, kflat);
+      const tr = Math.floor(term / kW);
+      const tc = term % kW;
+      const termInput = input[orow + tr][ocol + tc];
+      const termWeight = kernel[tr][tc];
+      const termProduct = termInput * termWeight;
 
       $("stepRange").value = step;
+      $("dockStepRange").value = step;
       $("stepLabel").textContent = `Step ${step + 1} of ${outH * outW}`;
       $("coordLabel").textContent = `output (${orow}, ${ocol}) = ${result}`;
+      $("dockStepLabel").textContent = `Output ${step + 1}/9`;
+      $("termRange").value = term;
+      $("dockTermRange").value = term;
+      $("dockTermLabel").textContent = `Term ${term + 1}/9`;
 
       for (let kr = 0; kr < kH; kr++) {
         for (let kc = 0; kc < kW; kc++) {
@@ -690,27 +841,50 @@
           cells.directPatch[kr][kc].classList.add("inputHot");
         }
       }
+      cells.input[orow + tr][ocol + tc].classList.add("termHot");
+      cells.kernel[tr][tc].classList.add("termHot");
+      cells.directPatch[tr][tc].classList.add("termHot");
       cells.output[orow][ocol].classList.add("outputHot");
 
       const im2colRow = step;
+      for (let r = 0; r <= im2colRow; r++) {
+        for (let c = 0; c < kH * kW; c++) {
+          cells.im2col[r][c].classList.add("built");
+        }
+      }
       for (let c = 0; c < kH * kW; c++) {
         cells.im2col[im2colRow][c].classList.add("rowHot");
       }
+      cells.im2col[im2colRow][term].classList.add("termHot");
 
       const mecRow = orow;
+      for (let r = 0; r <= mecRow; r++) {
+        for (let c = 0; c < kH * inW; c++) {
+          cells.mec[r][c].classList.add("built");
+        }
+      }
       for (let kr = 0; kr < kH; kr++) {
         for (let kc = 0; kc < kW; kc++) {
           const mecCol = kr * inW + ocol + kc;
           cells.mec[mecRow][mecCol].classList.add("mecHot", "segmentHot");
         }
       }
+      const mecTermCol = tr * inW + ocol + tc;
+      cells.mec[mecRow][mecTermCol].classList.add("termHot");
 
-      const terms = patch.map((value, idx) => `${value}*${kflat[idx]}`);
-      $("formula").textContent = `${terms.join(" + ")} = ${result}`;
+      const terms = patch.map((value, idx) => {
+        const cls = idx === term ? " class=\"activeTerm\"" : "";
+        return `<span${cls}>${value}*${kflat[idx]}</span>`;
+      });
+      $("formula").innerHTML = `${terms.join(" + ")} = ${result}`;
       $("calcTitle").textContent = `Output (${orow}, ${ocol}) uses the highlighted 3 by 3 patch`;
       $("directNote").textContent = `Direct convolution reads input rows ${orow}-${orow + 2} and columns ${ocol}-${ocol + 2} now. No patch copy is stored.`;
       $("im2colNote").textContent = `Full im2col row ${im2colRow} is exactly this copied patch: [${patch.join(", ")}].`;
-      $("mecNote").textContent = `MEC row ${mecRow} stores input rows ${orow}-${orow + 2}. The highlighted segment acts like the same copied patch without storing all patches as separate rows.`;
+      $("mecNote").textContent = `MEC row ${mecRow} stores full input rows ${orow}-${orow + 2}. The highlighted 3-by-3 segment starts at output column ${ocol}; it acts like the same patch without copying every patch into its own row.`;
+      $("stageTitle").textContent = `Building row ${step + 1}: output (${orow}, ${ocol})`;
+      $("stageText").textContent = `Direct CNN reads the patch in-place. Full im2col copies that patch into row ${im2colRow}. MEC reuses row-strip ${mecRow}, which was built from input rows ${orow}-${orow + 2}, then selects columns ${ocol}-${ocol + 2} inside each of those rows.`;
+      $("termTitle").textContent = `Term ${term + 1}: patch[${tr},${tc}] times kernel[${tr},${tc}]`;
+      $("termText").textContent = `${termInput} * ${termWeight} = ${termProduct}. Move this slider to see the dot product travel across the 3 by 3 patch, the im2col row, and the MEC segment.`;
     }
 
     function togglePlay() {
@@ -718,16 +892,33 @@
         clearInterval(timer);
         timer = null;
         $("playBtn").textContent = "Play";
+        $("dockPlayBtn").textContent = "Play";
         return;
       }
       $("playBtn").textContent = "Pause";
-      timer = setInterval(() => setStep(step + 1), 900);
+      $("dockPlayBtn").textContent = "Pause";
+      timer = setInterval(() => {
+        if (term < kH * kW - 1) {
+          setTerm(term + 1);
+        } else {
+          term = 0;
+          setStep(step + 1);
+        }
+      }, 650);
     }
 
     $("prevBtn").addEventListener("click", () => setStep(step - 1));
     $("nextBtn").addEventListener("click", () => setStep(step + 1));
     $("playBtn").addEventListener("click", togglePlay);
     $("stepRange").addEventListener("input", (event) => setStep(Number(event.target.value)));
+    $("dockPrevBtn").addEventListener("click", () => setStep(step - 1));
+    $("dockNextBtn").addEventListener("click", () => setStep(step + 1));
+    $("dockPlayBtn").addEventListener("click", togglePlay);
+    $("dockStepRange").addEventListener("input", (event) => setStep(Number(event.target.value)));
+    $("termPrevBtn").addEventListener("click", () => setTerm(term - 1));
+    $("termNextBtn").addEventListener("click", () => setTerm(term + 1));
+    $("termRange").addEventListener("input", (event) => setTerm(Number(event.target.value)));
+    $("dockTermRange").addEventListener("input", (event) => setTerm(Number(event.target.value)));
     document.querySelectorAll(".modeTabs button").forEach((button) => {
       button.addEventListener("click", () => setMode(button.dataset.mode));
     });
