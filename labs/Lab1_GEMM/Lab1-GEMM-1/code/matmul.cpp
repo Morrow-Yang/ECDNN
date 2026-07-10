@@ -1,116 +1,163 @@
-// g++ matmul.cpp -o matmul -std=c++17 -O3 -Wall && ./matmul
+// Build: g++ matmul.cpp -o matmul -std=c++17 -O3 -Wall
+// Run:   ./matmul <algorithm> <I> <K> <J> [repetitions]
 
-#include <sys/time.h>
-#include <iostream>
-#include <cstring>
 #include <cassert>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <string>
+#include <vector>
+
+// Unsigned arithmetic gives every loop order the same defined wraparound result.
+using Matrix = std::vector<std::uint32_t>;
+
+struct Problem {
+  int I;
+  int K;
+  int J;
+  Matrix A;
+  Matrix B;
+  Matrix C;
+  Matrix C_groundtruth;
+};
 
 double get_time() {
-  struct timeval tv;
-  gettimeofday(&tv, nullptr);
-  return tv.tv_sec + 1e-6 * tv.tv_usec;
+  using Clock = std::chrono::steady_clock;
+  return std::chrono::duration<double>(Clock::now().time_since_epoch()).count();
 }
 
-constexpr int n = 512;
-int A[n][n];
-int B[n][n];
-int BT[n][n];
-int AT[n][n];
-int C[n][n];
-int C_groundtruth[n][n];
+std::uint32_t& at(Matrix& matrix, int columns, int row, int column) {
+  return matrix[row * columns + column];
+}
 
-void init() {
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      A[i][j] = rand(); 
-      B[i][j] = rand(); 
-    } 
+std::uint32_t at(const Matrix& matrix, int columns, int row, int column) {
+  return matrix[row * columns + column];
+}
+
+Problem init(int I, int K, int J) {
+  Problem problem{I, K, J, Matrix(I * K), Matrix(K * J), Matrix(I * J), Matrix(I * J)};
+  for (int i = 0; i < I; ++i) {
+    for (int k = 0; k < K; ++k) {
+      at(problem.A, K, i, k) = rand();
+    }
   }
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      for (int k = 0; k < n; k++) {
-        C_groundtruth[i][j] += A[i][k] * B[k][j];
+  for (int k = 0; k < K; ++k) {
+    for (int j = 0; j < J; ++j) {
+      at(problem.B, J, k, j) = rand();
+    }
+  }
+
+  for (int i = 0; i < I; ++i) {
+    for (int j = 0; j < J; ++j) {
+      for (int k = 0; k < K; ++k) {
+        at(problem.C_groundtruth, J, i, j) += at(problem.A, K, i, k) * at(problem.B, J, k, j);
+      }
+    }
+  }
+  return problem;
+}
+
+void test(const Problem& problem) {
+  assert(problem.C == problem.C_groundtruth);
+}
+
+void matmul(Problem& problem) {
+  std::fill(problem.C.begin(), problem.C.end(), 0);
+  for (int i = 0; i < problem.I; ++i) {
+    for (int j = 0; j < problem.J; ++j) {
+      for (int k = 0; k < problem.K; ++k) {
+        at(problem.C, problem.J, i, j) += at(problem.A, problem.K, i, k) * at(problem.B, problem.J, k, j);
       }
     }
   }
 }
 
-void test() {
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      assert(C[i][j] == C_groundtruth[i][j]);
+void matmul_ikj(Problem& problem) {
+  std::fill(problem.C.begin(), problem.C.end(), 0);
+  for (int i = 0; i < problem.I; ++i) {
+    for (int k = 0; k < problem.K; ++k) {
+      for (int j = 0; j < problem.J; ++j) {
+        at(problem.C, problem.J, i, j) += at(problem.A, problem.K, i, k) * at(problem.B, problem.J, k, j);
+      }
     }
   }
 }
 
-void matmul() {
-  memset(C, 0, sizeof(C));
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      for (int k = 0; k < n; k++) {
-        C[i][j] += A[i][k] * B[k][j];    
-      }   
+void matmul_AT(Problem& problem) {
+  Matrix AT(problem.K * problem.I);
+  std::fill(problem.C.begin(), problem.C.end(), 0);
+  for (int i = 0; i < problem.I; ++i) {
+    for (int k = 0; k < problem.K; ++k) {
+      at(AT, problem.I, k, i) = at(problem.A, problem.K, i, k);
+    }
+  }
+  for (int i = 0; i < problem.I; ++i) {
+    for (int j = 0; j < problem.J; ++j) {
+      for (int k = 0; k < problem.K; ++k) {
+        at(problem.C, problem.J, i, j) += at(AT, problem.I, k, i) * at(problem.B, problem.J, k, j);
+      }
     }
   }
 }
 
-void matmul_ikj() {
-  memset(C, 0, sizeof(C));
-  for (int i = 0; i < n; i++) {
-    for (int k = 0; k < n; k++) {
-      for (int j = 0; j < n; j++) {
-        C[i][j] += A[i][k] * B[k][j];    
-      }   
+void matmul_BT(Problem& problem) {
+  Matrix BT(problem.J * problem.K);
+  std::fill(problem.C.begin(), problem.C.end(), 0);
+  for (int k = 0; k < problem.K; ++k) {
+    for (int j = 0; j < problem.J; ++j) {
+      at(BT, problem.K, j, k) = at(problem.B, problem.J, k, j);
+    }
+  }
+  for (int i = 0; i < problem.I; ++i) {
+    for (int j = 0; j < problem.J; ++j) {
+      for (int k = 0; k < problem.K; ++k) {
+        at(problem.C, problem.J, i, j) += at(problem.A, problem.K, i, k) * at(BT, problem.K, j, k);
+      }
     }
   }
 }
 
-void matmul_AT() {
-  memset(C, 0, sizeof(C));
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      AT[i][j] = A[j][i];
-    }
+int main(int argc, char* argv[]) {
+  if (argc < 5 || argc > 6) {
+    std::cerr << "Usage: " << argv[0] << " <matmul|matmul_ikj|matmul_AT|matmul_BT> <I> <K> <J> [repetitions]\n";
+    return 1;
   }
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      for (int k = 0; k < n; k++) {
-        C[i][j] += AT[k][i] * B[k][j];    
-      }   
-    }
-  }
-}
 
-void matmul_BT() {
-  memset(C, 0, sizeof(C));
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      BT[i][j] = B[j][i];
-    }
+  const std::string algorithm = argv[1];
+  const int I = std::atoi(argv[2]);
+  const int K = std::atoi(argv[3]);
+  const int J = std::atoi(argv[4]);
+  const int repetitions = argc == 6 ? std::atoi(argv[5]) : 32;
+  if (I <= 0 || K <= 0 || J <= 0 || repetitions <= 0) {
+    std::cerr << "I, K, J, and repetitions must be positive integers.\n";
+    return 1;
   }
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      for (int k = 0; k < n; k++) {
-        C[i][j] += A[i][k] * BT[j][k];    
-      }   
-    }
-  }
-}
 
-int main() {
-  init();
-  float avg_time = 0.0f;
-  for (int K = 0; K < 32; K++) {
-    auto t = get_time();
-    // matmul_ikj();
-    // matmul(); 
-    matmul_AT();
-    // matmul_BT();
-    test();
-    printf("%f\n", get_time() - t);
-    avg_time += get_time() - t;
+  Problem problem = init(I, K, J);
+  double total_time = 0.0;
+  for (int run = 0; run < repetitions; ++run) {
+    const double start = get_time();
+    if (algorithm == "matmul") {
+      matmul(problem);
+    } else if (algorithm == "matmul_ikj") {
+      matmul_ikj(problem);
+    } else if (algorithm == "matmul_AT") {
+      matmul_AT(problem);
+    } else if (algorithm == "matmul_BT") {
+      matmul_BT(problem);
+    } else {
+      std::cerr << "Unknown algorithm: " << algorithm << '\n';
+      return 1;
+    }
+    const double elapsed = get_time() - start;
+    test(problem);
+    total_time += elapsed;
   }
-  printf("Avg Time for Calculation: %f\n", avg_time / 32);
+
+  std::cout << "Algorithm: " << algorithm << '\n';
+  std::cout << "I: " << I << ", K: " << K << ", J: " << J << '\n';
+  std::cout << "Avg Time for Calculation: " << total_time / repetitions << " seconds\n";
   return 0;
 }
-
