@@ -21,7 +21,11 @@ for I in "${sizes[@]}"; do
         echo "Running $algorithm with A=${I}x${K}, B=${K}x${J}" >&2
         output="$(./matmul "$algorithm" "$I" "$K" "$J" "$repetitions")"
         average="$(awk '/Avg Time for Calculation:/ { print $5 }' <<< "$output")"
-        echo "$algorithm,$I,$J,$K,$average" >> "$output_file"
+        report_algorithm="$algorithm"
+        if [[ "$algorithm" == "matmul" ]]; then
+          report_algorithm="matmul_ijk"
+        fi
+        echo "$report_algorithm,$I,$J,$K,$average" >> "$output_file"
       done
     done
   done
