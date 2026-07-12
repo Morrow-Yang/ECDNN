@@ -1,13 +1,10 @@
 # ECDNN Lab 1 Submission Manifest
 
-This folder is the self-contained submission for **Lab 1: General Matrix Multiplication**. The report explains the design and measured results; the C++ files below are the requested Q2 and Q3 implementations.
-
 ## Files for Grading
 
 | File | Corresponding item | What it demonstrates |
 | --- | --- | --- |
 | `Lab1_Report.pdf` | Q1--Q3 report | Experimental environment, methodology, measurements, and discussion for all questions. |
-| `Lab1_Report.tex` | Report source | Editable XeLaTeX source for the PDF; it is not required to run the C++ code. |
 | `Q2_im2col_convolution.cpp` | Q2 | Direct convolution reference, im2col lowering, filter packing, GEMM, output mapping, timing, and numerical verification. |
 | `Q3_cache_optimized_gemm.cpp` | Q3 | Baseline `ikj` GEMM and three cache-oriented variants: tiling, tiling plus loop unrolling, and tiling plus write-back caching. |
 | `Q1_results.csv` | Q1 evidence | All 108 Q1 results: 27 independent `(I, J, K)` shapes over `{256, 512, 1024}` and four GEMM access patterns. |
@@ -65,11 +62,3 @@ matmul_tiled_writeback4
 
 Each run computes an independent reference result and uses an assertion to verify the optimized output. The report discusses why write-back caching reduces repeated C-matrix memory traffic and reports the measured speedups.
 
-## Report Source
-
-`Lab1_Report.tex` is configured for XeLaTeX because the author name contains Chinese characters. Compile it twice to resolve references:
-
-```bash
-xelatex Lab1_Report.tex
-xelatex Lab1_Report.tex
-```
