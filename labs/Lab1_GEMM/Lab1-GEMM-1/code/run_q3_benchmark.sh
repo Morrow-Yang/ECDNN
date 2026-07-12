@@ -7,7 +7,8 @@ cd "$(dirname "$0")"
 repetitions="${1:-32}"
 output_file="${2:-q3_results.csv}"
 algorithms=(matmul_ikj matmul_tiled matmul_tiled_unroll4 matmul_tiled_writeback4)
-read -r -a sizes <<< "${SIZES:-256 512 1024}"
+# The 256/512 set matches the report-sized Q3 experiment. Add 1024 explicitly if desired.
+read -r -a sizes <<< "${SIZES:-256 512}"
 
 g++ q3_matmul.cpp -o q3_matmul -std=c++17 -O3 -Wall
 trap 'rm -f q3_matmul' EXIT
