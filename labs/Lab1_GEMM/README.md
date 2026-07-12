@@ -10,9 +10,9 @@ matrix access order -> cache locality -> GEMM optimization -> im2col convolution
 
 Submit the following files to the course system after replacing the report's name and student-ID placeholders:
 
-1. `Lab1_Report.pdf`
-2. `Lab1-GEMM-1/code/im2col_convolution.cpp` (Q2)
-3. `Lab1-GEMM-1/code/q3_matmul.cpp` (Q3)
+1. `submission/Lab1_Report.pdf`
+2. `submission/Q2_im2col_convolution.cpp` (Q2)
+3. `submission/Q3_cache_optimized_gemm.cpp` (Q3)
 
 `q1_results.csv` and `q3_results.csv` are useful supporting evidence. Upload them too if the system permits extra files; otherwise, keep them locally as the source data for the tables in the report.
 
@@ -23,9 +23,10 @@ Submit the following files to the course system after replacing the report's nam
 | `Lab1-report.pdf` | Assignment brief | Official Lab 1 requirements. |
 | `lab1_slides.pdf` | Background | Cache hierarchy, matrix multiplication, transpose, and loop-order examples. |
 | `format-report.pdf` | Report reference | Example layout for the Q1 timing table. |
-| `Lab1_Report.pdf` | Final report | Ready-to-submit report. Fill in name and student ID first. |
-| `Lab1_Report.docx` | Final report | Editable Word version of the report. |
-| `Lab1_Report.md` | Final report source | Editable Markdown source used to generate the Word and PDF reports. |
+| `submission/Lab1_Report.pdf` | Final report | Canonical ready-to-submit report. Fill in name and student ID first. |
+| `submission/Lab1_Report.tex` | Final report source | Editable LaTeX source for the canonical PDF. |
+| `submission/` | Submission bundle | Curated report, Q2/Q3 code, and measurement evidence. See its README. |
+| `Lab1_Report.docx` / `Lab1_Report.md` | Earlier draft | Retained editable draft artifacts; use the LaTeX report in `submission/` for final submission. |
 | `convolution_playground.html` | Study aid | Interactive visual explanation of direct convolution, im2col, and MEC. Open it in a browser. |
 | `Lab1-GEMM-1/code/matmul.cpp` | Q1 | Configurable baseline GEMM implementations: `ijk`, `ikj`, transpose A, and transpose B. |
 | `Lab1-GEMM-1/code/run_q1_benchmark.sh` | Q1 | Runs the four Q1 algorithms for all 27 combinations of I, J, and K. |

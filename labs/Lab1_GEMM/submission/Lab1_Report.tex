@@ -1,0 +1,174 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\newcommand{\studentname}{[Your Name]}
+\newcommand{\studentid}{[Your Student ID]}
+
+\title{ECDNN Lab 1: General Matrix Multiplication}
+\author{\studentname \quad Student ID: \studentid}
+\date{July 2026}
+
+\begin{document}
+\maketitle
+
+\section{Experimental Environment}
+
+\begin{itemize}
+  \item Hardware: Apple A18 Pro (arm64)
+  \item Compiler: Apple Clang 21.0.0
+  \item Build flags: \texttt{-std=c++17 -O3 -Wall}
+  \item Timing protocol: arithmetic time only, averaged over 32 runs. Matrix initialization and correctness checks are excluded from timed regions.
+\end{itemize}
+
+All matrix programs use \texttt{uint32\_t}. Its defined wraparound arithmetic avoids signed-overflow undefined behavior, so different loop orders remain mathematically comparable. Every measured implementation is verified against an independently computed reference matrix.
+
+\section{Q1: Matrix Multiplication and Memory Access Order}
+
+Let $A$ have shape $I \times K$, $B$ have shape $K \times J$, and $C = AB$ have shape $I \times J$. The current Lab 1 requirement, as clarified in the course discussion, varies $I$, $J$, and $K$ independently over $\{256, 512, 1024\}$. Thus there are $3^3 = 27$ shapes and four algorithms, for 108 measurements in total.
+
+The format handout presents the 256/512 cases as a compact table. Table~\ref{tab:q1-small} follows that layout. The complete 108-row dataset, including every non-square case involving 1024, is supplied as \texttt{Q1\_results.csv} in the submission folder. Table~\ref{tab:q1-1024} additionally shows the largest square case.
+
+\begin{longtable}{@{}lrrrl@{}}
+\caption{Q1 timings for the 256/512 combinations (seconds).}\label{tab:q1-small}\\
+\toprule
+Algorithm & $I$ & $J$ & $K$ & Average time (s) \\
+\midrule
+\endfirsthead
+\toprule
+Algorithm & $I$ & $J$ & $K$ & Average time (s) \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\texttt{matmul\_ijk} & 256 & 256 & 256 & 0.039320 \\
+\texttt{matmul\_ikj} & 256 & 256 & 256 & 0.016263 \\
+\texttt{matmul\_AT} & 256 & 256 & 256 & 0.047428 \\
+\texttt{matmul\_BT} & 256 & 256 & 256 & 0.014347 \\
+\texttt{matmul\_ijk} & 256 & 512 & 256 & 0.071849 \\
+\texttt{matmul\_ikj} & 256 & 512 & 256 & 0.026771 \\
+\texttt{matmul\_AT} & 256 & 512 & 256 & 0.091209 \\
+\texttt{matmul\_BT} & 256 & 512 & 256 & 0.028565 \\
+\texttt{matmul\_ijk} & 256 & 256 & 512 & 0.071600 \\
+\texttt{matmul\_ikj} & 256 & 256 & 512 & 0.029960 \\
+\texttt{matmul\_AT} & 256 & 256 & 512 & 0.092601 \\
+\texttt{matmul\_BT} & 256 & 256 & 512 & 0.027431 \\
+\texttt{matmul\_ijk} & 256 & 512 & 512 & 0.156152 \\
+\texttt{matmul\_ikj} & 256 & 512 & 512 & 0.054825 \\
+\texttt{matmul\_AT} & 256 & 512 & 512 & 0.240522 \\
+\texttt{matmul\_BT} & 256 & 512 & 512 & 0.072494 \\
+\texttt{matmul\_ijk} & 512 & 256 & 256 & 0.076837 \\
+\texttt{matmul\_ikj} & 512 & 256 & 256 & 0.031326 \\
+\texttt{matmul\_AT} & 512 & 256 & 256 & 0.089856 \\
+\texttt{matmul\_BT} & 512 & 256 & 256 & 0.030448 \\
+\texttt{matmul\_ijk} & 512 & 512 & 256 & 0.149916 \\
+\texttt{matmul\_ikj} & 512 & 512 & 256 & 0.058289 \\
+\texttt{matmul\_AT} & 512 & 512 & 256 & 0.185444 \\
+\texttt{matmul\_BT} & 512 & 512 & 256 & 0.060163 \\
+\texttt{matmul\_ijk} & 512 & 256 & 512 & 0.147197 \\
+\texttt{matmul\_ikj} & 512 & 256 & 512 & 0.057302 \\
+\texttt{matmul\_AT} & 512 & 256 & 512 & 0.189066 \\
+\texttt{matmul\_BT} & 512 & 256 & 512 & 0.056760 \\
+\texttt{matmul\_ijk} & 512 & 512 & 512 & 0.303563 \\
+\texttt{matmul\_ikj} & 512 & 512 & 512 & 0.114815 \\
+\texttt{matmul\_AT} & 512 & 512 & 512 & 0.373731 \\
+\texttt{matmul\_BT} & 512 & 512 & 512 & 0.115826 \\
+\end{longtable}
+
+\begin{table}[h]
+\centering
+\caption{Largest square Q1 case: $I=J=K=1024$.}\label{tab:q1-1024}
+\begin{tabular}{lr}
+\toprule
+Algorithm & Average time (s) \\
+\midrule
+\texttt{matmul\_ijk} & 2.614750 \\
+\texttt{matmul\_ikj} & 0.981076 \\
+\texttt{matmul\_AT} & 3.090940 \\
+\texttt{matmul\_BT} & 0.891964 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Discussion.} C/C++ uses row-major storage. In \texttt{matmul\_ijk}, the inner $k$ loop reads $B[k][j]$ down a column, so consecutive accesses are separated by a row stride. In \texttt{matmul\_ikj}, the inner $j$ loop walks across contiguous rows of both $B$ and $C$, while a single value $A[i][k]$ is reused. Therefore \texttt{matmul\_ikj} has substantially better spatial locality. Transposing $B$ also makes the dot-product access contiguous; transposing $A$ does not address the problematic access to $B$. The measured timings consistently show that \texttt{matmul\_ikj} and \texttt{matmul\_BT} outperform \texttt{matmul\_ijk} and \texttt{matmul\_AT}.
+
+\section{Q2: im2col Convolution}
+
+The required convolution has input shape $1 \times 3 \times 56 \times 56$, 64 filters of shape $3 \times 3 \times 3$, stride 1, and padding 0. Its output shape is $64 \times 54 \times 54$.
+
+The im2col transformation creates one row per output position and one column per flattened receptive-field value:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+im2col matrix $A$ & $2916 \times 27$ \\
+Weight matrix $B$ & $27 \times 64$ \\
+GEMM result $C=AB$ & $2916 \times 64$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Here $2916=54 \times 54$ and $27=3 \times 3 \times 3$. The implementation packs the filters into $B$, computes the GEMM, then maps $C[\textit{position}][\textit{output channel}]$ back to $\textit{output}[\textit{output channel}][\textit{row}][\textit{column}]$. A direct seven-loop convolution provides the reference output.
+
+\begin{table}[h]
+\centering
+\caption{Q2 timing results.}\label{tab:q2}
+\begin{tabular}{lr}
+\toprule
+Measurement & Average time (s) \\
+\midrule
+Naive convolution & 0.000477 \\
+im2col transform & 0.000024 \\
+GEMM & 0.000719 \\
+im2col + GEMM & 0.000744 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The maximum difference between direct convolution and im2col+GEMM is 0.000000. For this small CPU workload, the handwritten GEMM and the additional im2col copy are slower than the compiler-optimized direct convolution. In production frameworks, im2col is useful because it exposes a large GEMM that can be dispatched to highly optimized BLAS or GPU kernels.
+
+\section{Q3: Cache Optimization of GEMM}
+
+Q3 uses \texttt{matmul\_ikj} as the baseline because Q1 established that it already has row-contiguous accesses. Three portable optimizations were implemented:
+
+\begin{enumerate}
+  \item \textbf{Tiling} (\texttt{matmul\_tiled}): multiplies 64 $\times$ 64 blocks so B and C blocks can be reused while they remain in cache.
+  \item \textbf{Tiling plus unrolling} (\texttt{matmul\_tiled\_unroll4}): processes four adjacent output columns per inner-loop iteration.
+  \item \textbf{Tiling plus write-back caching} (\texttt{matmul\_tiled\_writeback4}): keeps four partial C values in scalar accumulators through a K-block, then writes them back once.
+\end{enumerate}
+
+\begin{table}[h]
+\centering
+\caption{Q3 timings and speedups. Speedup is $t_{\mathrm{ikj}}/t_{\mathrm{variant}}$.}\label{tab:q3}
+\begin{tabular}{lrrrr}
+\toprule
+Algorithm & 256 time (s) & Speedup & 512 time (s) & Speedup \\
+\midrule
+\texttt{matmul\_ikj} baseline & 0.012034 & 1.00$\times$ & 0.086286 & 1.00$\times$ \\
+\texttt{matmul\_tiled} & 0.011239 & 1.07$\times$ & 0.089295 & 0.97$\times$ \\
+\texttt{matmul\_tiled\_unroll4} & 0.012023 & 1.00$\times$ & 0.094827 & 0.91$\times$ \\
+\texttt{matmul\_tiled\_writeback4} & 0.002868 & 4.20$\times$ & 0.022260 & 3.88$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Discussion.} Tiling gives a small improvement at 256 but is slightly slower at 512 with this block size. This demonstrates that blocking must be tuned for the cache hierarchy and compiler, rather than assumed to be beneficial automatically. Manual unrolling also does not improve this \texttt{-O3} build: the compiler already applies aggressive optimizations, while a manually enlarged loop body can add register pressure.
+
+Write-back caching is the strongest optimization. The baseline updates each C element once per $k$, repeatedly loading and storing it. The write-back kernel loads four C values, accumulates a complete K-block in scalar variables, then writes the four values once. This reduces C-memory traffic and improves temporal locality, giving 4.20$\times$ speedup at 256 and 3.88$\times$ at 512.
+
+\section{Reproducibility and Files}
+
+The submission folder contains the report source, the compiled PDF, the two required C++ files, and timing evidence. The experiments can be rerun from the original code directory:
+
+\begin{verbatim}
+./run_q1_benchmark.sh 32 q1_results.csv
+./run_im2col_convolution.sh 32
+./run_q3_benchmark.sh 32 q3_results.csv
+\end{verbatim}
+
+\end{document}

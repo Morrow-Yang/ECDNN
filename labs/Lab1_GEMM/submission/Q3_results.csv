@@ -1,0 +1,9 @@
+Algorithm,I,J,K,avg_time_seconds
+matmul_ikj,256,256,256,0.0120341
+matmul_tiled,256,256,256,0.0112385
+matmul_tiled_unroll4,256,256,256,0.0120233
+matmul_tiled_writeback4,256,256,256,0.00286804
+matmul_ikj,512,512,512,0.0862861
+matmul_tiled,512,512,512,0.0892945
+matmul_tiled_unroll4,512,512,512,0.094827
+matmul_tiled_writeback4,512,512,512,0.0222595
